@@ -1,12 +1,19 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
 import './App.css';
-import Title from './Title';
+import Main from './main/Main';
+import Header from './header/Header';
 
 class App extends Component {
+
+  componentWillMount (){
+    console.log('test')
+  }
   render() {
     return (
-      <Title />
+      <div>  
+        <Header />
+        <Main />
+      </div>
     ) 
   }
 }
