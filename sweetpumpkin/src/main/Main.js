@@ -4,7 +4,7 @@ import Movies from "./movies/Movies"
 import "./Main.css"
 
 class Main extends React.Component {
-       
+    
     state = {
         movies: [],
         total_pages: 1,
@@ -18,7 +18,7 @@ class Main extends React.Component {
             min: 1990,
             max: 2019,
             step: 1,
-            value: {min: 2000, max: 2019}
+            value: {min: 2012, max: new Date().getFullYear()}
         },
         rating: {
             label: "rating",
@@ -30,35 +30,44 @@ class Main extends React.Component {
         runtime: {
             label: "runtime",
             min: 0,
-            max: 300,
+            max: 360,
             step: 15,
             value: {min: 60, max: 120}
         }
     }
-
+    
     componentDidMount(){
-        this.fetchMovies(this.state.moviesUrl)
-        
+        const savedState = this.getStateFromLocalStorage()
+        console.log("Savedstate before IF",savedState)
+        if ( !savedState || (savedState && !savedState.movies.length)) {            
+            this.fetchMovies(this.state.moviesUrl)            
+        } else{
+            this.setState({ ...savedState })
+            this.generateUrl(savedState)
+        }
+
+        console.log("SavedState",savedState)
     }
-
-
+    
+    
     componentWillUpdate(nextProps, nextState){
+        this.saveStateToLocalStorage()
         if (this.state.moviesUrl !== nextState.moviesUrl) {
             this.fetchMovies(nextState.moviesUrl)            
         }
         if (this.state.page !== nextState.page) {
-            this.generateUrl()            
+            this.generateUrl(nextState)            
         }
     }
-
+    
     onGenreChange = event => {
         this.setState({genre: event.target.value})
     }
-
+    
     setGenres = genres => {
         this.setState({genres})
     }
-
+    
     onChange = data => {
         this.setState({
             [data.type]: {
@@ -67,13 +76,12 @@ class Main extends React.Component {
             }
         })
     }
-
-    generateUrl = () =>{
-        const { genres, year, rating, runtime, page } = this.state
-        console.log(this.state, "this.state in GenerateURL")
-        const selectedGenre = genres.find( genre => genre.name === this.state.genre )
+    
+    generateUrl = params =>{
+        const { genres, year, rating, runtime, page } = params
+        const selectedGenre = genres.find( genre => genre.name === params.genre )
         const genreId = selectedGenre.id
-
+        
         const moviesUrl = `https://api.themoviedb.org/3/discover/movie?`+
         `api_key=${process.env.REACT_APP_TMDB_API_KEY}&` +
         `language=en-US&sort_by=popularity.desc&` +
@@ -85,15 +93,16 @@ class Main extends React.Component {
         `with_runtime.gte=${runtime.value.min}&` +
         `with_runtime.lte=${runtime.value.max}&` +
         `page=${page}`
-
-
+        
+        
         this.setState({moviesUrl})
     }
     
     onSearchButtonClick = () =>{
-        this.generateUrl()
+        this.setState({page: 1})
+        this.generateUrl(this.state)
     }
-
+    
     onPageIncreases = () => {
         const { page, total_pages } = this.state
         const nextPage = page + 1
@@ -101,65 +110,73 @@ class Main extends React.Component {
             this.setState({page: nextPage})            
         }
     }
-
+    
     onPageDecrease = () => {
         const nextPage = this.state.page - 1
         if ( nextPage > 0) {
             this.setState({page: nextPage})
         }
     }
-
+    
     fetchMovies = (url) => {
         console.log(url, "URL")
         fetch(url)
         .then(response => response.json())
         .then(data => this.storeMovies(data))
         .catch(error => console.log(error))
-    
+        
     }
-
+    
     storeMovies = data => {
-
-        console.log(data, "data")
+        
+        // console.log(data, "data")
         const movies = data.results.map( result => {
             const { vote_count, id, genre_ids, poster_path, title, vote_average, release_date } = result
             return { vote_count, id, genre_ids, poster_path, title, vote_average, release_date }
         })
-        console.log(movies)
+        // console.log(movies)
         this.setState({ movies, total_pages: data.total_pages })
     }
-
+    
+    saveStateToLocalStorage = () => {
+        localStorage.setItem("sweetpumpkins.params", JSON.stringify(this.state))
+    }
+    
+    getStateFromLocalStorage = () => {
+        return JSON.parse(localStorage.getItem("sweetpumpkins.params"))
+    }
+    
     render() {
         return(
             <section className="main">
-                <Navigation 
-                    onChange={this.onChange}
-                    setGenres={this.setGenres}
-                    onGenreChange={this.onGenreChange}
-                    onSearchButtonClick={this.onSearchButtonClick}
-                    {...this.state}                    
-                />
-                <Movies 
-                    movies={this.state.movies}
-                    page={this.state.page}
-                    onPageIncreases={this.onPageIncreases}
-                    onPageDecrease={this.onPageDecrease}    
-                />
+            <Navigation 
+            onChange={this.onChange}
+            setGenres={this.setGenres}
+            onGenreChange={this.onGenreChange}
+            onSearchButtonClick={this.onSearchButtonClick}
+            {...this.state}                    
+            />
+            <Movies 
+            movies={this.state.movies}
+            page={this.state.page}
+            onPageIncreases={this.onPageIncreases}
+            onPageDecrease={this.onPageDecrease}    
+            />
             </section>
-        )
-    }    
-
-    // componentWillReceiveProps(nextProps ,nextState){
-    //     if (this.state.moviesUrl !== nextState.moviesUrl) {
-    //         this.fetchMovies(nextState.moviesUrl)
-    //     }
-    // }
+            )
+        }    
+        
+        // componentWillReceiveProps(nextProps ,nextState){
+        //     if (this.state.moviesUrl !== nextState.moviesUrl) {
+        //         this.fetchMovies(nextState.moviesUrl)
+        //     }
+        // }
+        
+        
+        
+        
+        
+        
+    }
     
-
-   
-   
-    
-    
-}
-
-export default Main
+    export default Main
